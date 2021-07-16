@@ -1,21 +1,15 @@
-import { StatusBar } from 'expo-status-bar';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React from "react";
+import AuthStack from "./navigators/AuthStack";
 
 export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
+  return <AuthStack />;
 }
+// #10b881
+// #96E072
+// #aaff00
+// #5cf64a
+// #43b929
+// #1c7c54
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+// background-color: #00b712;
+// background-image: linear-gradient(315deg, #00b712 0%, #5aff15 74%);
