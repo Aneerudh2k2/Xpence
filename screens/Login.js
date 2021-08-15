@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
-  Alert,
 } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
@@ -22,12 +21,12 @@ const Login = ({ navigation }) => {
     clientSecret: "QGSaWa3sUcX2Lp9sq3bnyzin",
   });
 
-  useEffect(() => {
-    if (response?.type === "success") {
-      const { authentication } = response;
-      console.log(authentication);
-    }
-  }, [response]);
+  // useEffect(() => {
+  //   if (response?.type === "success") {
+  //     const { authentication } = response;
+  //     console.log(authentication);
+  //   }
+  // }, [response]);
 
   const handleRedirect = (event) => {
     if (Platform.OS === "ios") {
