@@ -8,6 +8,9 @@ import {
   FlatList,
   StatusBar,
   ActivityIndicator,
+  Alert,
+  RefreshControl,
+  LogBox,
 } from "react-native";
 import {
   AntDesign,
@@ -15,77 +18,189 @@ import {
   EvilIcons,
 } from "@expo/vector-icons";
 import { Avatar } from "react-native-elements";
+import { get_access_token } from "../utils/securestore";
+import { ScrollView } from "react-native-gesture-handler";
 
 const Profile = ({ navigation }) => {
-  const data = [
-    {
-      id: 1,
-      name: "Food",
-      count: 3,
-    },
-    {
-      id: 2,
-      name: "Education",
-      count: 4,
-    },
-    {
-      id: 3,
-      name: "Sports",
-      count: 4,
-    },
-    {
-      id: 4,
-      name: "Banking",
-      count: 2,
-    },
-    {
-      id: 5,
-      name: "Health Care",
-      count: 3,
-    },
-    {
-      id: 6,
-      name: "Gadget",
-      count: 10,
-    },
-    {
-      id: 7,
-      name: "Shopping",
-      count: 5,
-    },
-    {
-      id: 8,
-      name: "Miscellaneous",
-      count: 15,
-    },
-  ];
-
+  LogBox.ignoreLogs(["source.uri"]);
   const categoryListHeightAnimatedValue = useRef(
     new Animated.Value(115)
   ).current;
   const [showMoreToggle, setShowMoreToggle] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [avatar, setAvatar] = useState(null);
+  const [userInfo, setUserInfo] = useState({
+    avatar: "",
+    name: "",
+    email_id: "",
+  });
+  const [expenseInfo, setExpenseInfo] = useState({
+    total_count: 0,
+    expense_sum: 0,
+    category_count: 0,
+  });
 
-  const handleApi = async () => {
+  const handleCategoryCount = (category_count) => {
+    let obj = {
+      food: 0,
+      sports: 0,
+      education: 0,
+      banking: 0,
+      healthCare: 0,
+      gadget: 0,
+      shopping: 0,
+      misc: 0,
+    };
+
+    category_count.forEach((value) => {
+      obj[value.type] = value["count(type)"];
+    });
+    return obj;
+  };
+
+  const handleUserApi = async () => {
     try {
+      const access_token = await get_access_token();
       setLoading(true);
-      const data = await fetch("https://randomuser.me/api");
+      // const data = await fetch("https://randomuser.me/api");
+
+      let userData = await fetch(
+        `https://xpenceapi.herokuapp.com/users/me?access_token=${access_token}`
+      );
       // "https://randomuser.me/api"
-      const img = await data.json();
-      if (img) {
-        setLoading(false);
+      userData = await userData.json();
+      if (userData.error) {
+        console.log("\nProfile error: ", userData.error);
+        if (userData.error === "Unauthorized") {
+          Alert.alert("Session Expired", "Please login again", [
+            {
+              text: "Okay",
+              onPress: () => {
+                navigation.navigate("Login");
+                setLoading(false);
+              },
+            },
+          ]);
+        }
       }
-      setAvatar(img.results[0].picture.large);
+      // console.log(userData);
+      setUserInfo({
+        avatar: userData[0].avatar,
+        name: userData[0].name,
+        email_id: userData[0].email_id,
+      });
+      // console.log(userInfo);
       // setAvatar(img[0].avatar);
     } catch (error) {
       console.log(error);
     }
   };
 
+  const handleExpenseApi = async () => {
+    try {
+      const access_token = await get_access_token();
+      let expenseData1 = await fetch(
+        `https://xpenceapi.herokuapp.com/expense/profile_stats?access_token=${access_token}`
+      );
+      expenseData1 = await expenseData1.json();
+      if (expenseData1.error) {
+        console.log(expenseData1.error);
+        if (expenseData1.error === "Unauthorized") {
+          Alert.alert("Session Expired", "Please login again", [
+            {
+              text: "Okay",
+              onPress: () => {
+                navigation.navigate("Login");
+                setLoading(false);
+              },
+            },
+          ]);
+        }
+      }
+      // console.log(expenseData1);
+
+      let expenseData2 = await fetch(
+        `https://xpenceapi.herokuapp.com/expense/category_count?access_token=${access_token}`
+      );
+      expenseData2 = await expenseData2.json();
+      if (expenseData2.error) {
+        console.log(expenseData2.error);
+        if (expenseData2.error === "Unauthorized") {
+          Alert.alert("Session Expired", "Please login again", [
+            {
+              text: "Okay",
+              onPress: () => {
+                navigation.navigate("Login");
+                setLoading(false);
+              },
+            },
+          ]);
+        }
+      }
+      // console.log(expenseData2);
+
+      setExpenseInfo({
+        total_count: expenseData1[0]["count(*)"],
+        expense_sum: expenseData1[0]["sum(amt_spent)"],
+        category_count: handleCategoryCount(expenseData2),
+      });
+
+      // console.log(expenseInfo);
+      setLoading(false);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   useEffect(() => {
-    handleApi();
+    handleUserApi();
   }, []);
+
+  useEffect(() => {
+    handleExpenseApi();
+  }, []);
+
+  const data = [
+    {
+      id: 1,
+      name: "Food",
+      count: expenseInfo.category_count.food,
+    },
+    {
+      id: 2,
+      name: "Education",
+      count: expenseInfo.category_count.education,
+    },
+    {
+      id: 3,
+      name: "Sports",
+      count: expenseInfo.category_count.sports,
+    },
+    {
+      id: 4,
+      name: "Banking",
+      count: expenseInfo.category_count.banking,
+    },
+    {
+      id: 5,
+      name: "Health Care",
+      count: expenseInfo.category_count.healthCare,
+    },
+    {
+      id: 6,
+      name: "Gadget",
+      count: expenseInfo.category_count.gadget,
+    },
+    {
+      id: 7,
+      name: "Shopping",
+      count: expenseInfo.category_count.shopping,
+    },
+    {
+      id: 8,
+      name: "Miscellaneous",
+      count: expenseInfo.category_count.misc,
+    },
+  ];
 
   if (loading) {
     return (
@@ -153,7 +268,7 @@ const Profile = ({ navigation }) => {
           <Avatar
             size="xlarge"
             rounded
-            source={{ uri: avatar }}
+            source={{ uri: userInfo.avatar }}
             activeOpacity={0.5}
           />
         </View>
@@ -166,11 +281,11 @@ const Profile = ({ navigation }) => {
             marginTop: 15,
           }}
         >
-          <Text style={{ fontSize: 23 }}>Aneerudh</Text>
+          <Text style={{ fontSize: 23 }}>{userInfo.name}</Text>
           {/*Icon*/}
           <View style={{ flexDirection: "row", padding: 3 }}>
             <MaterialCommunityIcons name="gmail" size={24} color="#EA4335" />
-            <Text style={{ left: 5, fontSize: 15 }}>anee469@gmail.com</Text>
+            <Text style={{ left: 5, fontSize: 15 }}>{userInfo.email_id}</Text>
           </View>
         </View>
       </View>
@@ -201,14 +316,14 @@ const Profile = ({ navigation }) => {
             }}
           >
             <Text style={{ fontSize: 15 }}>Number of expenses till now</Text>
-            <Text style={{ fontSize: 15 }}>10</Text>
+            <Text style={{ fontSize: 15 }}>{expenseInfo.total_count}</Text>
           </View>
 
           <View
             style={{ flexDirection: "row", justifyContent: "space-between" }}
           >
-            <Text style={{ fontSize: 15 }}>Price of expenses</Text>
-            <Text style={{ fontSize: 15 }}>₹12458</Text>
+            <Text style={{ fontSize: 15 }}>Total Expenses</Text>
+            <Text style={{ fontSize: 15 }}>₹{expenseInfo.expense_sum}</Text>
           </View>
         </View>
       </View>
@@ -305,15 +420,31 @@ const Profile = ({ navigation }) => {
         showHideTransition="fade"
         hidden={false}
       />
-
-      {renderNavBar({ navigation })}
-      {renderProfileBanner()}
-      <View style={{ flex: 0.625 }}>
-        {renderStats()}
-        <View contentContainerStyle={{ paddingBottom: 20 }}>
-          {renderExpenseTypes()}
+      <ScrollView
+        contentContainerStyle={{
+          flex: 1,
+        }}
+        refreshControl={
+          <RefreshControl
+            colors={["#43b929"]}
+            refreshing={loading}
+            onRefresh={() => {
+              handleUserApi();
+              handleExpenseApi();
+            }}
+          />
+        }
+      >
+        {renderNavBar({ navigation })}
+        {/* {console.log(userInfo, expenseInfo)} */}
+        {renderProfileBanner()}
+        <View style={{ flex: 0.625 }}>
+          {renderStats()}
+          <View contentContainerStyle={{ paddingBottom: 20 }}>
+            {renderExpenseTypes()}
+          </View>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 };

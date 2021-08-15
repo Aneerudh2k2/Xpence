@@ -7,19 +7,27 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
+  Alert,
 } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import * as AuthSession from "expo-auth-session";
 import * as Linking from "expo-linking";
+import { get_access_token, save_access_token } from "../utils/securestore";
 
 const Login = ({ navigation }) => {
-  const [redirectData, setRedirectData] = useState({});
   const [request, response, promptAsync] = Google.useAuthRequest({
     expoClientId:
       "211230601413-987o47v63tgvp570reqrmfp5ceorrt9f.apps.googleusercontent.com",
     clientSecret: "QGSaWa3sUcX2Lp9sq3bnyzin",
   });
+
+  useEffect(() => {
+    if (response?.type === "success") {
+      const { authentication } = response;
+      console.log(authentication);
+    }
+  }, [response]);
 
   const handleRedirect = (event) => {
     if (Platform.OS === "ios") {
@@ -29,8 +37,6 @@ const Login = ({ navigation }) => {
     }
 
     let data = Linking.parse(event.url);
-
-    setRedirectData(data);
   };
 
   // const removeLinkingListener = () => {
@@ -43,34 +49,90 @@ const Login = ({ navigation }) => {
 
   // openAuthSessionAsync doesn't require that you add Linking listeners, it
   // returns the redirect URL in the resulting Promise
+  // Using WebBrowser AuthSession api
   const handleOAuthLogin = async () => {
-    let redirectUrl = await Linking.makeUrl("/home");
+    let redirectUrl = await Linking.makeUrl("/");
     console.log(redirectUrl);
-    let authUrl = `https://xpenceapi.herokuapp.com/login`;
+    let authUrl = `https://xpenceapi.herokuapp.com/login?redirectUrl=${redirectUrl}`;
     try {
       let authresult = await WebBrowser.openAuthSessionAsync(
         authUrl,
         redirectUrl
       );
       let temp;
-      if (authresult.url) {
+      console.log("auth result: ", authresult, "\n");
+      if (authresult.type === "success") {
         temp = Linking.parse(authresult.url);
+        // temp = JSON.parse(temp.queryParams.user);
+        save_access_token(temp.queryParams.access_token);
+        console.log(temp.queryParams.access_token);
+        navigation.navigate("Home");
       }
-      console.log(authresult, temp);
-      setRedirectData(temp);
     } catch (e) {
       console.log("handleOAuthlogin error: ", e);
     }
   };
 
+  // Using AuthSession api
   const handleLogin = async () => {
-    let redirectUrl = await Linking.makeUrl("/home");
+    // let redirectUrl = await Linking.makeUrl("/home");
+    let redirectUrl = await AuthSession.makeRedirectUri({ path: "/home" });
     console.log(redirectUrl);
-    const result = await AuthSession.startAsync({
+    const authresult = await AuthSession.startAsync({
       authUrl: `https://xpenceapi.herokuapp.com/login`,
       returnUrl: redirectUrl,
     });
-    console.log(result);
+    let temp;
+    console.log("auth result: ", authresult, "\n");
+    if (authresult.type === "success") {
+      temp = Linking.parse(authresult.url);
+      temp = JSON.parse(temp.queryParams.user);
+    }
+  };
+
+  const login = async () => {
+    let redirectUri = await AuthSession.makeRedirectUri({
+      path: "/home",
+    });
+    console.log(redirectUri);
+    const authresult = await promptAsync({ redirectUri });
+    console.log(authresult);
+
+    // // To refresh the logging with
+    // const refreshResult = await AuthSession.refreshAsync({
+    //   clientId:
+    //     "211230601413-987o47v63tgvp570reqrmfp5ceorrt9f.apps.googleusercontent.com",
+    //   clientSecret: "QGSaWa3sUcX2Lp9sq3bnyzin",
+    //   scopes: ["profile", "email"],
+    //   refreshToken: "" /** Your refresh token here */,
+    // });
+    // console.log(refreshResult);
+
+    //
+    // const refreshToken = await AuthSession.revokeAsync({
+    //   token:
+    //     "ya29.a0ARrdaM967_1FLimbB5gav0cpPw6cfviqh2iwXngi85wajdpFBIpGlU81Gl3H3wogtKQ2-L7OLhCpn2rPvFE-_-GchiTeHZddJK9PWWK_4tHCLJKVHcXuoUjAI1G8IaUpxILrw7GMjDhZ8-3xcKqV_YgEI7VVVQ",
+    //   // clientId: "211230601413-987o47v63tgvp570reqrmfp5ceorrt9f.apps.googleusercontent.com",
+    //   // clientSecret: "QGSaWa3sUcX2Lp9sq3bnyzin",
+    //   // scopes: ["profile", "email"],
+    //   tokenTypeHint: "bearer",
+    // });
+    // console.log(refreshToken);
+  };
+
+  const example = async () => {
+    const access_token = await get_access_token();
+    console.log(access_token);
+    // let res = await fetch(
+    //   `https://xpenceapi.herokuapp.com/example?access_token=${access_token}`
+    // );
+    let redirectUrl = await Linking.makeUrl("/");
+    console.log(redirectUrl);
+    let res = await fetch(
+      `http://192.168.43.99:3000/example?redirectUrl=${redirectUrl}`
+    );
+    res = await res.json();
+    console.log(res);
   };
 
   return (
@@ -99,12 +161,14 @@ const Login = ({ navigation }) => {
             style={styles.siginwithgoogle}
             onPress={() => {
               // navigation.navigate("Home");
-              // handleOAuthLogin();
+              handleOAuthLogin();
+              // login();
+              // example();
               // Linking.openURL("exp://192.168.43.99:19000/--/home");
               // if (authResult.authresult.type === "success") {
               //   navigation.navigate("Home");
               // }
-              handleLogin();
+              // handleLogin();
               // console.log(authResult);
             }}
           >

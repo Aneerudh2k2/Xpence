@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, Alert } from "react-native";
 import { DrawerContentScrollView, DrawerItem } from "@react-navigation/drawer";
 import { Octicons } from "@expo/vector-icons";
 import { AntDesign } from "@expo/vector-icons";
@@ -7,20 +7,36 @@ import { EvilIcons } from "@expo/vector-icons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { Avatar } from "react-native-elements";
+import { get_access_token } from "../utils/securestore";
 
-const DrawerContent = (props) => {
+const DrawerContent = (props, { navigation }) => {
   const isFocused = useIsFocused();
   const [hfocused, setHFocused] = useState(false);
   const [pfocused, setPFocused] = useState(false);
   const [efocused, setEFocused] = useState(false);
   const [avatar, setAvatar] = useState(null);
+  const [username, setUsername] = useState("");
 
   const handleApi = async () => {
     try {
+      // Dummmy api
       const data = await fetch("https://randomuser.me/api");
-      // "https://randomuser.me/api"
       const img = await data.json();
-      setAvatar(img.results[0].picture.large);
+      // "https://randomuser.me/api"
+
+      // my api
+      const access_token = await get_access_token();
+      console.log("\nFrom drawercontent: ", access_token);
+      let data1 = await fetch(
+        `https://xpenceapi.herokuapp.com/users/me?access_token=${access_token}`
+      );
+      data1 = await data1.json();
+      if (data1.error) {
+        console.log("\nDrawer content fetch api: ", data1.error);
+      } else {
+        setAvatar(data1[0].avatar);
+        setUsername(data1[0].name);
+      }
       // setAvatar(img[0].avatar);
     } catch (error) {
       console.log(error);
@@ -31,11 +47,29 @@ const DrawerContent = (props) => {
     handleApi();
   }, []);
 
+  const handleSignOut = async () => {
+    const access_token = await get_access_token();
+    let result = await fetch(
+      `https://xpenceapi.herokuapp.com/logout?access_token=${access_token}`
+    );
+    result = await result.json();
+    if (result.logged_out) {
+      props.navigation.navigate("Login");
+    } else {
+      Alert.alert("Info", "Something went wrong 😕", [
+        {
+          text: "return to home",
+          onPress: () => props.navigation.navigate("Home"),
+        },
+      ]);
+    }
+  };
+
   return (
     <View
       style={{
         flex: 1,
-        margin: 10,
+        margin: 8,
       }}
     >
       <View
@@ -56,7 +90,7 @@ const DrawerContent = (props) => {
           }}
         />
 
-        <Text style={{ fontSize: 20, marginLeft: 10 }}>Hello, Aneerudh</Text>
+        <Text style={{ fontSize: 20, marginLeft: 10 }}>Hello, {username}</Text>
       </View>
 
       <View
@@ -138,7 +172,7 @@ const DrawerContent = (props) => {
             justifyContent: "center",
           }}
           onPress={() => {
-            props.navigation.navigate("Login");
+            handleSignOut();
           }}
         >
           <Octicons

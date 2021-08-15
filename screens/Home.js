@@ -3,6 +3,7 @@ import {
   View,
   ScrollView,
   RefreshControl,
+  TextInput,
   Text,
   StyleSheet,
   Image,
@@ -13,6 +14,7 @@ import {
   FlatList,
   LogBox,
   Alert,
+  Keyboard,
 } from "react-native";
 import { Avatar } from "react-native-elements";
 import {
@@ -28,12 +30,58 @@ import { LineChart, PieChart } from "react-native-chart-kit";
 // import Animated from "react-native-reanimated";
 import BottomSheet from "reanimated-bottom-sheet";
 import { LinearGradient } from "expo-linear-gradient";
+import { get_access_token } from "../utils/securestore";
+import { Picker } from "@react-native-picker/picker";
 
-const Home = ({ navigation }) => {
+const Home = ({ navigation, route }) => {
   LogBox.ignoreLogs(["VirtualizedLists"]);
   const [loading, setLoading] = useState(false);
   const [avatar, setAvatar] = useState(null);
+  const [username, setUsername] = useState("");
   const [statsToggle, setStatsToggle] = useState("");
+  const [homeExpenseData, sethomeExpenseData] = useState([]);
+  const [piecountdata, setPieCountData] = useState({
+    food: 0,
+    sports: 0,
+    education: 0,
+    banking: 0,
+    healthCare: 0,
+    gadget: 0,
+    shopping: 0,
+    misc: 0,
+  });
+  const [totalExpenseBanner, settotalExpenseBanner] = useState(0);
+  const [monthlywiseExpense, setmonthlywiseExpense] = useState({
+    Jan: 0,
+    Feb: 0,
+    Mar: 0,
+    Apr: 0,
+    May: 0,
+    Jun: 0,
+    Jul: 0,
+    Aug: 0,
+    Sep: 0,
+    Oct: 0,
+    Nov: 0,
+    Dec: 0,
+  });
+  const [title, setTitle] = useState("");
+  const [amtspent, setAmtSpent] = useState("");
+  const [type, setType] = useState("");
+  const [location, setLocation] = useState("");
+  // const [postExpenseData, setPostExpenseData] = useState({
+  //   title: "",
+  //   amt_spent: "",
+  //   type: "",
+  //   place: "",
+  // });
+  let postExpenseData = {
+    title: "",
+    amt_spent: "",
+    type: "",
+    place: "",
+  };
+  let formdata = new FormData();
   const sheetRefStats = useRef(null);
   const sheetRefCategory = useRef(null);
   const sheetRefAdd = useRef(null);
@@ -44,24 +92,236 @@ const Home = ({ navigation }) => {
   //   outputRange: [0.35, 0],
   // });
 
-  const handleApi = async () => {
+  const handleCategoryCount = (category_count) => {
+    let obj = {
+      food: 0,
+      sports: 0,
+      education: 0,
+      banking: 0,
+      healthCare: 0,
+      gadget: 0,
+      shopping: 0,
+      misc: 0,
+    };
+
+    category_count.forEach((value) => {
+      obj[value.type] = value["count(type)"];
+    });
+    return obj;
+  };
+
+  const handleMonthlyExpense = (monthlydata) => {
+    let obj = {
+      Jan: 0,
+      Feb: 0,
+      Mar: 0,
+      Apr: 0,
+      May: 0,
+      Jun: 0,
+      Jul: 0,
+      Aug: 0,
+      Sep: 0,
+      Oct: 0,
+      Nov: 0,
+      Dec: 0,
+    };
+
+    monthlydata.forEach((value) => {
+      let month = value["month(updatedAt)"];
+      switch (month) {
+        case 1:
+          obj.Jan = value["sum(amt_spent)"];
+          break;
+        case 2:
+          obj.Feb = value["sum(amt_spent)"];
+          break;
+        case 3:
+          obj.Mar = value["sum(amt_spent)"];
+          break;
+        case 4:
+          obj.Apr = value["sum(amt_spent)"];
+          break;
+        case 5:
+          obj.May = value["sum(amt_spent)"];
+          break;
+        case 6:
+          obj.Jun = value["sum(amt_spent)"];
+          break;
+        case 7:
+          obj.Jul = value["sum(amt_spent)"];
+          break;
+        case 8:
+          obj.Aug = value["sum(amt_spent)"];
+          break;
+        case 9:
+          obj.Sep = value["sum(amt_spent)"];
+          break;
+        case 10:
+          obj.Oct = value["sum(amt_spent)"];
+          break;
+        case 11:
+          obj.Nov = value["sum(amt_spent)"];
+          break;
+        case 12:
+          obj.Dec = value["sum(amt_spent)"];
+          break;
+        default:
+          break;
+      }
+    });
+
+    console.log(obj);
+    return obj;
+  };
+
+  const handleUserApi = async () => {
     try {
       setLoading(true);
+      const access_token = await get_access_token();
+      console.log("From homejs: ", access_token);
       const data = await fetch("https://randomuser.me/api");
       // "https://randomuser.me/api"
+      let data1 = await fetch(
+        `https://xpenceapi.herokuapp.com/users/me?access_token=${access_token}`
+      );
+      data1 = await data1.json();
+      console.log(data1);
       const img = await data.json();
-      if (img) {
-        setLoading(false);
+      if (data1.error) {
+        console.log(data1.error);
+        if (data1.error === "Unauthorized") {
+          Alert.alert("Session Expired", "Please login again", [
+            {
+              text: "Okay",
+              onPress: () => {
+                navigation.navigate("Login");
+                setLoading(false);
+              },
+            },
+          ]);
+        }
       }
-      setAvatar(img.results[0].picture.large);
-      // setAvatar(img[0].avatar);
+
+      // setAvatar(img1.results[0].picture.large);
+      setAvatar(data1[0].avatar);
+      setUsername(data1[0].name);
     } catch (error) {
       console.log(error);
     }
   };
 
+  const handleExpenseApi = async () => {
+    try {
+      const access_token = await get_access_token();
+      let homePageExpenseData = await fetch(
+        `https://xpenceapi.herokuapp.com/expenses?sortBy=createdAt_desc&limit=5&access_token=${access_token}`
+      );
+      homePageExpenseData = await homePageExpenseData.json();
+      if (homePageExpenseData.error) {
+        console.log(homePageExpenseData.error);
+        setLoading(false);
+      }
+
+      let countData = await fetch(
+        `https://xpenceapi.herokuapp.com/expense/category_count?access_token=${access_token}`
+      );
+      countData = await countData.json();
+      if (countData.error) {
+        console.log(countData.error);
+        setLoading(false);
+      }
+
+      let totalExpense = await fetch(
+        `https://xpenceapi.herokuapp.com/expense/profile_stats?access_token=${access_token}`
+      );
+      totalExpense = await totalExpense.json();
+      if (totalExpense.error) {
+        console.log(totalExpense.error);
+        setLoading(false);
+      }
+      console.log(totalExpense);
+
+      let monthlyData = await fetch(
+        `https://xpenceapi.herokuapp.com/expense/monthly_expense?access_token=${access_token}`
+      );
+      monthlyData = await monthlyData.json();
+      if (monthlyData.error) {
+        console.log(monthlyData.error);
+        setLoading(false);
+      }
+
+      setmonthlywiseExpense(handleMonthlyExpense(monthlyData));
+      settotalExpenseBanner(totalExpense[0]["sum(amt_spent)"]);
+      setPieCountData(handleCategoryCount(countData));
+      sethomeExpenseData(homePageExpenseData);
+      setLoading(false);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const handlePostExpense = async (postExpenseData) => {
+    const token = await get_access_token();
+    console.log("inside handle func: ", { title, amtspent, type, location });
+    console.log("using variable: ", postExpenseData);
+    console.log("using form data: ", formdata);
+    let data = await fetch(
+      `https://xpenceapi.herokuapp.com/expense?access_token=${token}`,
+      {
+        method: "post",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(postExpenseData),
+      }
+    );
+    data = await data.json();
+    console.log("Post expense data: ", data);
+    if (data.error) {
+      console.log(data.error);
+      if (data.error === "Unauthorized") {
+        Alert.alert("Session Expired", "Please login again", [
+          {
+            text: "Okay",
+            onPress: () => {
+              navigation.navigate("Login");
+              setLoading(false);
+            },
+          },
+        ]);
+      }
+    } else {
+      Alert.alert("Info", "Your expense added successfully 😍", [
+        {
+          text: "Add more expenses",
+          onPress: () => {
+            setTitle("");
+            setType("");
+            setAmtSpent("");
+            setLocation("");
+            sheetRefAdd.current.snapTo(0);
+          },
+        },
+        {
+          text: "Okay",
+          onPress: () => {
+            setTitle("");
+            setType("");
+            setAmtSpent("");
+            setLocation("");
+            sheetRefAdd.current.snapTo(1);
+          },
+        },
+      ]);
+    }
+  };
+
   useEffect(() => {
-    handleApi();
+    handleUserApi();
+  }, []);
+
+  useEffect(() => {
+    handleExpenseApi();
   }, []);
 
   if (loading) {
@@ -83,43 +343,58 @@ const Home = ({ navigation }) => {
     );
   }
 
-  const pastExpensedata = [
-    {
-      id: 1,
-      title: "Lunch with friends",
-      amt_spent: 1250,
-      type: "Food",
-      place: "Mangalam hotel",
-    },
-    {
-      id: 2,
-      title: "kalai bday treat",
-      amt_spent: 1250,
-      type: "Food",
-      place: "Mangalam hotel",
-    },
-    {
-      id: 3,
-      title: "Gym fees",
-      amt_spent: 1250,
-      type: "Sports",
-      place: "Kings gym",
-    },
-    {
-      id: 4,
-      title: "Badminton membership",
-      amt_spent: 1250,
-      type: "Sports",
-      place: "Super smash acad",
-    },
-    {
-      id: 5,
-      title: "Tempered glass",
-      amt_spent: 1250,
-      type: "Gadget",
-      place: "Chennai mobiles",
-    },
-  ];
+  // const pastExpensedata = [
+  //   {
+  //     id: "1",
+  //     title: "Lunch with friends",
+  //     amt_spent: 1250,
+  //     type: "Food",
+  //     place: "Mangalam hotel",
+  //   },
+  //   {
+  //     id: "2",
+  //     title: "kalai bday treat",
+  //     amt_spent: 1250,
+  //     type: "Food",
+  //     place: "Mangalam hotel",
+  //   },
+  //   {
+  //     id: "3",
+  //     title: "Gym fees",
+  //     amt_spent: 1250,
+  //     type: "Sports",
+  //     place: "Kings gym",
+  //   },
+  //   {
+  //     id: "4",
+  //     title: "Badminton membership",
+  //     amt_spent: 1250,
+  //     type: "Sports",
+  //     place: "Super smash acad",
+  //   },
+  //   {
+  //     id: "5",
+  //     title: "Tempered glass",
+  //     amt_spent: 1250,
+  //     type: "Gadget",
+  //     place: "Chennai mobiles",
+  //   },
+  // ];
+
+  const pastExpensedata = homeExpenseData.map((each) => {
+    const { id, title, amt_spent, type, place, createdAt } = each;
+    return {
+      id,
+      title,
+      amt_spent,
+      type,
+      place,
+      createdAt,
+    };
+  });
+
+  // const pastExpensedata = [];
+  // console.log(pastExpensedata);
 
   const RenderNavBar = ({ navigation }) => {
     return (
@@ -161,7 +436,11 @@ const Home = ({ navigation }) => {
             style={{
               width: 45,
             }}
-            onPress={() => sheetRefAdd.current.snapTo(0)}
+            onPress={() => {
+              sheetRefCategory.current.snapTo(1);
+              sheetRefStats.current.snapTo(1);
+              sheetRefAdd.current.snapTo(0);
+            }}
           >
             <Entypo name="plus" size={35} color="black" />
           </TouchableOpacity>
@@ -170,7 +449,6 @@ const Home = ({ navigation }) => {
     );
   };
 
-  let now = new Date();
   const greetings = () => {
     let today = new Date().getHours();
     if (today >= 5 && today < 12) return "Morning  🌤️";
@@ -204,7 +482,7 @@ const Home = ({ navigation }) => {
               color: "#034078",
             }}
           >
-            Aneerudh
+            {username}
           </Text>
         </View>
       </View>
@@ -225,7 +503,7 @@ const Home = ({ navigation }) => {
           padding: 20,
           paddingTop: 25,
           borderRadius: 15,
-          elevation: 5,
+          elevation: 2,
         }}
       >
         <View>
@@ -246,7 +524,7 @@ const Home = ({ navigation }) => {
               color: "#004f2d",
             }}
           >
-            ₹ 12,000
+            ₹ {totalExpenseBanner}
           </Text>
         </View>
         <View>
@@ -275,7 +553,7 @@ const Home = ({ navigation }) => {
           flexDirection: "row",
           borderRadius: 20,
           backgroundColor: "#fff",
-          elevation: 5,
+          elevation: 2,
         }}
       >
         <TouchableOpacity
@@ -291,6 +569,7 @@ const Home = ({ navigation }) => {
           onPress={() => {
             setStatsToggle("chart");
             sheetRefCategory.current.snapTo(1); // to close lists
+            sheetRefAdd.current.snapTo(1);
             sheetRefStats.current.snapTo(0); // to open stats
           }}
         >
@@ -316,6 +595,7 @@ const Home = ({ navigation }) => {
           onPress={() => {
             setStatsToggle("list");
             sheetRefStats.current.snapTo(1); // to close stats
+            sheetRefAdd.current.snapTo(1);
             sheetRefCategory.current.snapTo(0); // to open lists
           }}
         >
@@ -333,6 +613,7 @@ const Home = ({ navigation }) => {
   };
 
   const renderMonthlyStats = () => {
+    const year = new Date().getFullYear();
     return (
       <View
         style={{
@@ -350,13 +631,18 @@ const Home = ({ navigation }) => {
         <LineChart
           data={{
             labels: [
-              "January",
-              "February",
-              "March",
-              "April",
+              "Jan",
+              "Feb",
+              "Mar",
+              "Apr",
               "May",
-              "June",
-              "July",
+              "Jun",
+              "Jul",
+              "Aug",
+              "Sep",
+              "Oct",
+              "Nov",
+              "Dec",
             ],
             datasets: [
               // {
@@ -373,20 +659,25 @@ const Home = ({ navigation }) => {
               // },
               {
                 data: [
-                  Math.random() * 100,
-                  Math.random() * 100,
-                  Math.random() * 100,
-                  Math.random() * 100,
-                  Math.random() * 100,
-                  Math.random() * 100,
-                  Math.random() * 100,
+                  monthlywiseExpense.Jan,
+                  monthlywiseExpense.Feb,
+                  monthlywiseExpense.Mar,
+                  monthlywiseExpense.Apr,
+                  monthlywiseExpense.May,
+                  monthlywiseExpense.Jun,
+                  monthlywiseExpense.Jul,
+                  monthlywiseExpense.Aug,
+                  monthlywiseExpense.Sep,
+                  monthlywiseExpense.Oct,
+                  monthlywiseExpense.Nov,
+                  monthlywiseExpense.Dec,
                 ],
                 color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
               },
             ],
-            // legend: ["Exp 1", "Exp 2"],
+            legend: [`${year}`],
           }}
-          width={Dimensions.get("window").width - 10} // from react-native
+          width={Dimensions.get("window").width - 20} // from react-native
           height={Dimensions.get("window").height - 500}
           yAxisLabel="₹"
           yAxisSuffix="k"
@@ -395,7 +686,7 @@ const Home = ({ navigation }) => {
             backgroundColor: "#96E072",
             backgroundGradientFrom: "#43b929",
             backgroundGradientTo: "#5cf64a",
-            decimalPlaces: 2, // optional, defaults to 2dp
+            decimalPlaces: 0, // optional, defaults to 2dp
             color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
             labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
             style: {
@@ -447,56 +738,56 @@ const Home = ({ navigation }) => {
             data={[
               {
                 name: "Food",
-                count: 3,
+                count: piecountdata.food,
                 color: "#d95d39",
                 legendFontColor: "#fff",
                 legendFontSize: 12,
               },
               {
                 name: "Education",
-                count: 4,
+                count: piecountdata.education,
                 color: "skyblue",
                 legendFontColor: "#fff",
                 legendFontSize: 12,
               },
               {
                 name: "Sports",
-                count: 4,
+                count: piecountdata.sports,
                 color: "#000",
                 legendFontColor: "#fff",
                 legendFontSize: 12,
               },
               {
                 name: "Banking",
-                count: 2,
+                count: piecountdata.banking,
                 color: "#136f63",
                 legendFontColor: "#fff",
                 legendFontSize: 12,
               },
               {
                 name: "HealthCare",
-                count: 3,
+                count: piecountdata.healthCare,
                 color: "#10b881",
                 legendFontColor: "#fff",
                 legendFontSize: 12,
               },
               {
                 name: "Gadget",
-                count: 10,
+                count: piecountdata.gadget,
                 color: "#084887",
                 legendFontColor: "#fff",
                 legendFontSize: 12,
               },
               {
                 name: "Shopping",
-                count: 5,
+                count: piecountdata.shopping,
                 color: "#ffd639",
                 legendFontColor: "#fff",
                 legendFontSize: 12,
               },
               {
                 name: "Misc",
-                count: 15,
+                count: piecountdata.misc,
                 color: "gray",
                 legendFontColor: "#fff",
                 legendFontSize: 12,
@@ -536,14 +827,401 @@ const Home = ({ navigation }) => {
         style={{
           padding: 10,
           height: 380,
-          alignItems: "center",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          // alignItems: "center",
           backgroundColor: "#fff",
           elevation: 20,
           shadowColor: "gray",
           borderTopWidth: 2,
         }}
       >
-        <Text>Hello this where you add details</Text>
+        <View
+          style={{
+            flexDirection: "column",
+            margin: 10,
+            borderWidth: 1,
+            flex: 1,
+            // justifyContent: "space-between",
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              borderWidth: 0.25,
+              borderRadius: 10,
+              justifyContent: "space-evenly",
+              flex: 0.15,
+              margin: 5,
+            }}
+          >
+            <AntDesign
+              name="idcard"
+              size={35}
+              color="black"
+              adjustsFontSizeToFit={true}
+            />
+            <TextInput
+              placeholder="Type title here....."
+              style={{
+                flex: 0.7,
+                width: 200,
+                borderWidth: 0.25,
+              }}
+            />
+          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              borderWidth: 0.25,
+              borderRadius: 10,
+              justifyContent: "space-evenly",
+              flex: 0.15,
+              margin: 5,
+            }}
+          >
+            <Text style={{ flex: 0.2 }}>Amount spent</Text>
+            <TextInput
+              placeholder="Type amount spent here....."
+              style={{
+                flex: 0.7,
+                width: 200,
+                borderWidth: 0.25,
+              }}
+            />
+          </View>
+
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-evenly",
+              flex: 0.15,
+              borderRadius: 10,
+              margin: 5,
+            }}
+          >
+            <Text style={{ flex: 0.2 }}>Category</Text>
+            <View style={{ flex: 0.7, borderWidth: 0.25 }}>
+              <Picker
+                selectedValue={type}
+                onValueChange={(itemValue, itemIndex) => setType(itemValue)}
+                mode="dropdown"
+              >
+                <Picker.Item label="Food" value="food" />
+                <Picker.Item label="Sports" value="sports" />
+                <Picker.Item label="Education" value="education" />
+                <Picker.Item label="Banking" value="banking" />
+                <Picker.Item label="Health Care" value="healthCare" />
+                <Picker.Item label="Gadgets" value="gadget" />
+                <Picker.Item label="Shopping" value="shopping" />
+                <Picker.Item label="Miscellaneous" value="misc" />
+              </Picker>
+            </View>
+          </View>
+
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              borderWidth: 0.25,
+              borderRadius: 10,
+              justifyContent: "space-evenly",
+              flex: 0.15,
+              margin: 5,
+            }}
+          >
+            <Text style={{ flex: 0.2 }}>Location</Text>
+            <TextInput
+              placeholder="Type location here....."
+              style={{
+                flex: 0.7,
+                width: 200,
+                borderWidth: 0.25,
+              }}
+            />
+          </View>
+
+          <View>
+            <TouchableOpacity style={{}}>
+              <Text>Add</Text>
+            </TouchableOpacity>
+            <TouchableOpacity>
+              <Text>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderContent = () => {
+    return (
+      <View
+        style={{
+          flexDirection: "column",
+          backgroundColor: "#fff",
+          padding: 16,
+          height: 400,
+          borderWidth: 0.5,
+        }}
+      >
+        {/* Header */}
+        <View style={{ flexDirection: "row", justifyContent: "center" }}>
+          <Text style={{ fontSize: 20 }}> Add Expenditures</Text>
+        </View>
+
+        {/* Title */}
+        <View
+          style={{
+            flexDirection: "row",
+            margin: 10,
+            borderWidth: 0.5,
+            borderRadius: 5,
+          }}
+        >
+          <View
+            style={{
+              padding: 7,
+              borderRightWidth: 0.5,
+              borderBottomRightRadius: 2,
+            }}
+          >
+            <AntDesign
+              name="idcard"
+              size={35}
+              color="black"
+              adjustsFontSizeToFit={true}
+            />
+          </View>
+
+          <View
+            style={{
+              padding: 10,
+            }}
+          >
+            <TextInput
+              style={{
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 16,
+                paddingRight: 10,
+                width: 250,
+              }}
+              numberOfLines={1}
+              value={title}
+              onChangeText={(value) => {
+                setTitle(value);
+              }}
+              placeholder="Type title...."
+            />
+          </View>
+        </View>
+
+        {/*Amout spent*/}
+        <View
+          style={{
+            flexDirection: "row",
+            margin: 10,
+            borderWidth: 0.5,
+            borderRadius: 5,
+          }}
+        >
+          <View
+            style={{
+              padding: 7,
+              borderRightWidth: 0.5,
+              borderBottomRightRadius: 2,
+            }}
+          >
+            <MaterialCommunityIcons
+              name="currency-inr"
+              size={35}
+              color="black"
+            />
+          </View>
+
+          <View
+            style={{
+              padding: 10,
+            }}
+          >
+            <TextInput
+              style={{
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 16,
+                paddingRight: 10,
+                width: 250,
+              }}
+              numberOfLines={1}
+              value={amtspent}
+              onChangeText={(value) => {
+                setAmtSpent(value);
+              }}
+              placeholder="Type amount spent......"
+              keyboardType="numeric"
+            />
+          </View>
+        </View>
+
+        {/* Type of expense */}
+        <View
+          style={{
+            flexDirection: "row",
+            borderWidth: 0.5,
+            borderRadius: 5,
+            margin: 10,
+          }}
+        >
+          <View
+            style={{
+              padding: 10,
+              borderRightWidth: 0.5,
+              borderBottomRightRadius: 2,
+            }}
+          >
+            <MaterialCommunityIcons name="collage" size={24} color="black" />
+          </View>
+          <Picker
+            style={{ height: 50, width: 290 }}
+            selectedValue={type}
+            onValueChange={(itemValue) => {
+              setType(itemValue);
+            }}
+            mode="dropdown"
+            itemStyle={{ fontSize: 20 }}
+          >
+            <Picker.Item label="Food" value="food" />
+            <Picker.Item label="Sports" value="sports" />
+            <Picker.Item label="Education" value="education" />
+            <Picker.Item label="Banking" value="banking" />
+            <Picker.Item label="Health Care" value="healthCare" />
+            <Picker.Item label="Gadgets" value="gadget" />
+            <Picker.Item label="Shopping" value="shopping" />
+            <Picker.Item label="Miscellaneous" value="misc" />
+          </Picker>
+        </View>
+
+        {/* Location */}
+        <View
+          style={{
+            flexDirection: "row",
+            margin: 10,
+            borderWidth: 0.5,
+            borderRadius: 5,
+          }}
+        >
+          <View
+            style={{
+              padding: 10,
+              borderRightWidth: 0.5,
+              borderBottomRightRadius: 2,
+            }}
+          >
+            <Entypo
+              name="location-pin"
+              size={24}
+              color="black"
+              adjustsFontSizeToFit={true}
+            />
+          </View>
+
+          <View
+            style={{
+              padding: 10,
+            }}
+          >
+            <TextInput
+              style={{
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 16,
+                paddingRight: 10,
+                width: 250,
+              }}
+              numberOfLines={1}
+              value={location}
+              onChangeText={(text) => {
+                setLocation(text);
+              }}
+              placeholder="Type place of expense...."
+            />
+          </View>
+        </View>
+
+        {/* Button */}
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            margin: 20,
+          }}
+        >
+          {/* Add */}
+          <TouchableOpacity
+            style={{
+              paddingHorizontal: 35,
+              paddingVertical: 10,
+              backgroundColor: "#058ed9",
+              borderRadius: 10,
+            }}
+            onPress={(e) => {
+              e.preventDefault();
+              Keyboard.dismiss();
+              if (type === "") {
+                postExpenseData.type = "food";
+              }
+              console.log({ title, amtspent, type, location });
+
+              if (title === "" || amtspent === "" || location === "") {
+                Alert.alert("Info", "Empty fields are not expenses 😕");
+              } else {
+                // setPostExpenseData({
+                //   title: title,
+                //   amt_spent: amtspent,
+                //   type: type,
+                //   place: location,
+                // });
+                postExpenseData.title = title;
+                postExpenseData.amt_spent = amtspent;
+                postExpenseData.type = type === "" ? "food" : type;
+                postExpenseData.place = location;
+
+                handlePostExpense(postExpenseData);
+              }
+              // console.log(expenseData);
+              // sheetRef.current.snapTo(1);
+            }}
+          >
+            <Text style={{ color: "#fff" }}>Add</Text>
+          </TouchableOpacity>
+
+          {/* Cancel */}
+          <TouchableOpacity
+            style={{
+              paddingHorizontal: 35,
+              paddingVertical: 10,
+              backgroundColor: "red",
+              borderRadius: 10,
+            }}
+            onPress={() => {
+              Keyboard.dismiss();
+              setTitle("");
+              setType("");
+              setAmtSpent("");
+              setLocation("");
+              sheetRefAdd.current.snapTo(1);
+            }}
+          >
+            <Text style={{ color: "#fff" }}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -552,18 +1230,18 @@ const Home = ({ navigation }) => {
     const renderIcon = (item) => {
       const type = item.type;
       switch (type) {
-        case "Food":
+        case "food":
           return (
             <MaterialCommunityIcons name="food" size={45} color="#d95d39" />
           );
 
-        case "Education":
+        case "education":
           return <FontAwesome5 name="book-reader" size={45} color="skyblue" />;
 
-        case "Sports":
+        case "sports":
           return <Entypo name="game-controller" size={45} color="black" />;
 
-        case "Banking":
+        case "banking":
           return (
             <MaterialCommunityIcons
               name="currency-inr"
@@ -572,19 +1250,21 @@ const Home = ({ navigation }) => {
             />
           );
 
-        case "HealthCare":
+        case "healthCare":
           return <FontAwesome5 name="hospital" size={45} color="#10b881" />;
 
-        case "Gadget":
+        case "gadget":
           return (
             <Entypo name="tablet-mobile-combo" size={45} color="#084887" />
           );
 
-        case "Shopping":
+        case "shopping":
           return <Feather name="shopping-bag" size={45} color="black" />;
 
-        case "Miscellaneous":
-          return <Ionicons name="ios-settings" size={45} color="gray" />;
+        case "misc":
+          return (
+            <Entypo name="dots-three-horizontal" size={24} color="black" />
+          );
 
         default:
           return (
@@ -593,8 +1273,8 @@ const Home = ({ navigation }) => {
       }
     };
 
-    const date = () => {
-      const today = new Date();
+    const date = (date) => {
+      const today = new Date(date);
       return today.toDateString().substring(4, today.toDateString().length);
     };
 
@@ -608,7 +1288,7 @@ const Home = ({ navigation }) => {
           padding: 15,
           // borderWidth: 1,
           borderRadius: 10,
-          elevation: 5,
+          elevation: 3,
         }}
         onLongPress={() => Alert.alert(`${item.id}`)}
       >
@@ -651,7 +1331,7 @@ const Home = ({ navigation }) => {
               <Text style={{ color: "gray" }}>{item.place}</Text>
             </View>
             <View>
-              <Text style={{}}>{date()}</Text>
+              <Text style={{}}>{date(item.createdAt)}</Text>
             </View>
           </View>
         </View>
@@ -660,15 +1340,17 @@ const Home = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar
-        animated={true}
-        backgroundColor="#96e072"
-        barStyle="light-content"
-        showHideTransition="fade"
-        hidden={false}
-      />
-      {/* <Animated.View
+    <>
+      <View style={styles.container}>
+        <StatusBar
+          animated={true}
+          backgroundColor="#96e072"
+          barStyle="light-content"
+          showHideTransition="fade"
+          hidden={false}
+        />
+
+        {/* <Animated.View
         pointerEvents="none"
         style={[
           {
@@ -678,80 +1360,112 @@ const Home = ({ navigation }) => {
           },
         ]}
       /> */}
-      <RenderNavBar navigation={navigation} />
-      <ScrollView
-        contentContainerStyle={{
-          flex: 1,
-          margin: 5,
-          // borderWidth: 1,
-        }}
-        // refreshControl={
-        //   <RefreshControl
-        //     colors={["#43b929"]}
-        //     refreshing={loading}
-        //     onRefresh={() => handleApi()}
-        //   />
-        // }
-      >
-        <RenderGreeting />
-        <RenderExpenseBanner />
-        <RenderStatsToggle />
-        <View
-          style={{
-            flex: 0.76,
-            margin: 10,
-            padding: 5,
+        <RenderNavBar navigation={navigation} />
+        <ScrollView
+          contentContainerStyle={{
+            flex: 1,
+            margin: 5,
             // borderWidth: 1,
           }}
+          refreshControl={
+            <RefreshControl
+              colors={["#43b929"]}
+              refreshing={loading}
+              onRefresh={() => {
+                handleUserApi();
+                handleExpenseApi();
+              }}
+            />
+          }
         >
-          <Text style={{ fontSize: 25, margin: 6 }}>Last Expenses </Text>
-          <FlatList
-            data={pastExpensedata}
-            renderItem={renderPastExpenses}
-            keyExtractor={(item) => item.id.toString()}
-            refreshing={loading}
-            onRefresh={() => {
-              handleApi();
+          <RenderGreeting />
+          <RenderExpenseBanner />
+          <RenderStatsToggle />
+          <View
+            style={{
+              flex: 0.76,
+              margin: 10,
+              padding: 5,
+              // borderWidth: 1,
             }}
+          >
+            <Text style={{ fontSize: 25, margin: 6 }}>Last Expenses </Text>
+            {pastExpensedata.length === 0 ? (
+              <View style={{ margin: 10, padding: 5, alignItems: "center" }}>
+                <Text>Oops no more expenses ☹️</Text>
+                <TouchableOpacity
+                  style={{
+                    flexDirection: "row",
+                    marginTop: 15,
+                    borderRadius: 5,
+                    padding: 10,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    backgroundColor: "#5cf64a",
+                  }}
+                  onPress={() => {
+                    sheetRefAdd.current.snapTo(0);
+                  }}
+                >
+                  <Text>Add expense</Text>
+                  <Entypo
+                    name="plus"
+                    style={{ left: 6 }}
+                    size={25}
+                    color="black"
+                  />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <FlatList
+                data={pastExpensedata}
+                renderItem={renderPastExpenses}
+                keyExtractor={(item) => item.id.toString()}
+                refreshing={loading}
+                onRefresh={() => {
+                  handleUserApi();
+                  handleExpenseApi();
+                }}
+              />
+            )}
+          </View>
+          <BottomSheet
+            ref={sheetRefStats}
+            snapPoints={[360, 0]}
+            // callbackNode={fall}
+            borderRadius={25}
+            initialSnap={1}
+            renderContent={renderMonthlyStats}
+            // enabledInnerScrolling={true}
+            // onCloseEnd={() => {}}
+            enabledContentTapInteraction={false}
           />
-        </View>
-        <BottomSheet
-          ref={sheetRefStats}
-          snapPoints={[360, 0]}
-          // callbackNode={fall}
-          borderRadius={25}
-          initialSnap={1}
-          renderContent={renderMonthlyStats}
-          // enabledInnerScrolling={true}
-          // onCloseEnd={() => {}}
-          enabledContentTapInteraction={false}
-        />
 
-        <BottomSheet
-          ref={sheetRefCategory}
-          snapPoints={[350, 0]}
-          // callbackNode={fall}
-          borderRadius={25}
-          initialSnap={1}
-          renderContent={renderCategoryStats}
-          enabledInnerScrolling={true}
-          // onCloseEnd={() => {}}
-          enabledContentTapInteraction={false}
-        />
-
-        <BottomSheet
-          ref={sheetRefAdd}
-          snapPoints={[380, 0]}
-          // callbackNode={fall}
-          borderRadius={25}
-          initialSnap={1}
-          renderContent={renderAddForm}
-          enabledInnerScrolling={true}
-          // onCloseEnd={() => {}}
-          enabledContentTapInteraction={false}
-        />
-      </ScrollView>
-    </View>
+          <BottomSheet
+            ref={sheetRefCategory}
+            snapPoints={[350, 0]}
+            // callbackNode={fall}
+            borderRadius={25}
+            initialSnap={1}
+            renderContent={renderCategoryStats}
+            enabledInnerScrolling={true}
+            // onCloseEnd={() => {}}
+            enabledContentTapInteraction={false}
+          />
+        </ScrollView>
+      </View>
+      <BottomSheet
+        ref={sheetRefAdd}
+        snapPoints={[400, 0]}
+        // callbackNode={fall}
+        borderRadius={25}
+        initialSnap={1}
+        renderContent={renderContent}
+        enabledInnerScrolling={true}
+        // onCloseEnd={() => {}}
+        enabledContentTapInteraction={false}
+      />
+    </>
   );
 };
 {

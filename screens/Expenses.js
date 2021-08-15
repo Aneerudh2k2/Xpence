@@ -18,94 +18,41 @@ import {
   EvilIcons,
   Ionicons,
 } from "@expo/vector-icons";
+import { get_access_token } from "../utils/securestore";
 
 const Expenses = ({ navigation }) => {
-  const Fullexpense = [
-    {
-      id: 1,
-      title: "Lunch with friends",
-      amt_spent: 1250,
-      type: "Food",
-      place: "Mangalam hotel",
-    },
-    {
-      id: 2,
-      title: "kalai bday treat",
-      amt_spent: 1250,
-      type: "Food",
-      place: "Mangalam hotel",
-    },
-    {
-      id: 3,
-      title: "Gym fees",
-      amt_spent: 1250,
-      type: "Sports",
-      place: "Kings gym",
-    },
-    {
-      id: 4,
-      title: "Badminton membership",
-      amt_spent: 1250,
-      type: "Sports",
-      place: "Super smash acad",
-    },
-    {
-      id: 5,
-      title: "Tempered glass",
-      amt_spent: 1250,
-      type: "Gadget",
-      place: "Chennai mobiles",
-    },
-    {
-      id: 6,
-      title: "Sem fees",
-      amt_spent: 1250,
-      type: "Education",
-      place: "Tce",
-    },
-    {
-      id: 7,
-      title: "Underwear",
-      amt_spent: 1250,
-      type: "Miscellaneous",
-      place: "Jockey showroom",
-    },
-    {
-      id: 8,
-      title: "Covid vaccination",
-      amt_spent: 1250,
-      type: "HealthCare",
-      place: "GH Kgiri",
-    },
-    {
-      id: 9,
-      title: "Jersey T-shirts",
-      amt_spent: 1250,
-      type: "Shopping",
-      place: "stadium behind",
-    },
-    {
-      id: 10,
-      title: "Cash deposit",
-      amt_spent: 1250,
-      type: "Banking",
-      place: "Canara Bank",
-    },
-  ];
   const [loading, setLoading] = useState(false);
-  const [avatar, setAvatar] = useState(null);
   const [search, setSearch] = useState("");
+  const [expAPiData, setexpApiData] = useState([]);
   const [expense, setExpense] = useState([]);
   const handleApi = async () => {
     try {
       setLoading(true);
-      const data = await fetch("https://randomuser.me/api");
-      // "https://randomuser.me/api"
-      const img = await data.json();
-      if (img) {
+      // const data = await fetch("https://randomuser.me/api");
+      // // "https://randomuser.me/api"
+      const access_token = await get_access_token();
+      let expenseData = await fetch(
+        `https://xpenceapi.herokuapp.com/expenses?sortBy=createdAt_desc&access_token=${access_token}`
+      );
+      expenseData = await expenseData.json();
+      if (expenseData.error) {
+        console.log(expenseData.error);
+        if (expenseData.error === "Unauthorized") {
+          Alert.alert("Session Expired", "Please login again", [
+            {
+              text: "Okay",
+              onPress: () => {
+                navigation.navigate("Login");
+                setLoading(false);
+              },
+            },
+          ]);
+        }
         setLoading(false);
       }
-      setAvatar(img.results[0].picture.large);
+
+      setexpApiData(expenseData);
+      setLoading(false);
       // setAvatar(img[0].avatar);
     } catch (error) {
       console.log(error);
@@ -115,6 +62,85 @@ const Expenses = ({ navigation }) => {
   useEffect(() => {
     handleApi();
   }, []);
+
+  // const Fullexpense = [
+  //   {
+  //     id: 1,
+  //     title: "Lunch with friends",
+  //     amt_spent: 1250,
+  //     type: "Food",
+  //     place: "Mangalam hotel",
+  //   },
+  //   {
+  //     id: 2,
+  //     title: "kalai bday treat",
+  //     amt_spent: 1250,
+  //     type: "Food",
+  //     place: "Mangalam hotel",
+  //   },
+  //   {
+  //     id: 3,
+  //     title: "Gym fees",
+  //     amt_spent: 1250,
+  //     type: "Sports",
+  //     place: "Kings gym",
+  //   },
+  //   {
+  //     id: 4,
+  //     title: "Badminton membership",
+  //     amt_spent: 1250,
+  //     type: "Sports",
+  //     place: "Super smash acad",
+  //   },
+  //   {
+  //     id: 5,
+  //     title: "Tempered glass",
+  //     amt_spent: 1250,
+  //     type: "Gadget",
+  //     place: "Chennai mobiles",
+  //   },
+  //   {
+  //     id: 6,
+  //     title: "Sem fees",
+  //     amt_spent: 1250,
+  //     type: "Education",
+  //     place: "Tce",
+  //   },
+  //   {
+  //     id: 7,
+  //     title: "Underwear",
+  //     amt_spent: 1250,
+  //     type: "Miscellaneous",
+  //     place: "Jockey showroom",
+  //   },
+  //   {
+  //     id: 8,
+  //     title: "Covid vaccination",
+  //     amt_spent: 1250,
+  //     type: "HealthCare",
+  //     place: "GH Kgiri",
+  //   },
+  //   {
+  //     id: 9,
+  //     title: "Jersey T-shirts",
+  //     amt_spent: 1250,
+  //     type: "Shopping",
+  //     place: "stadium behind",
+  //   },
+  //   {
+  //     id: 10,
+  //     title: "Cash deposit",
+  //     amt_spent: 1250,
+  //     type: "Banking",
+  //     place: "Canara Bank",
+  //   },
+  // ];
+
+  const Fullexpense = expAPiData.map((each) => {
+    const { id, title, amt_spent, type, place, createdAt, updatedAt } = each;
+
+    return { id, title, amt_spent, type, place, createdAt, updatedAt };
+  });
 
   const renderNavBar = ({ navigation }) => {
     return (
@@ -152,18 +178,18 @@ const Expenses = ({ navigation }) => {
     const renderIcon = (item) => {
       const type = item.type;
       switch (type) {
-        case "Food":
+        case "food":
           return (
             <MaterialCommunityIcons name="food" size={45} color="#d95d39" />
           );
 
-        case "Education":
+        case "education":
           return <FontAwesome5 name="book-reader" size={45} color="skyblue" />;
 
-        case "Sports":
+        case "sports":
           return <Entypo name="game-controller" size={45} color="black" />;
 
-        case "Banking":
+        case "banking":
           return (
             <MaterialCommunityIcons
               name="currency-inr"
@@ -172,19 +198,21 @@ const Expenses = ({ navigation }) => {
             />
           );
 
-        case "HealthCare":
+        case "healthCare":
           return <FontAwesome5 name="hospital" size={45} color="#10b881" />;
 
-        case "Gadget":
+        case "gadget":
           return (
             <Entypo name="tablet-mobile-combo" size={45} color="#084887" />
           );
 
-        case "Shopping":
+        case "shopping":
           return <Feather name="shopping-bag" size={45} color="black" />;
 
-        case "Miscellaneous":
-          return <Ionicons name="ios-settings" size={45} color="gray" />;
+        case "misc":
+          return (
+            <Entypo name="dots-three-horizontal" size={24} color="black" />
+          );
 
         default:
           return (
@@ -193,16 +221,9 @@ const Expenses = ({ navigation }) => {
       }
     };
 
-    const date = () => {
-      const today = new Date();
+    const date = (date) => {
+      const today = new Date(date);
       return today.toDateString().substring(4, today.toDateString().length);
-      // const str =
-      //   String(today.getDate()) +
-      //   "/" +
-      //   String(today.getMonth() + 1) +
-      //   "/" +
-      //   String(today.getFullYear());
-      // return str;
     };
 
     return (
@@ -258,7 +279,7 @@ const Expenses = ({ navigation }) => {
               <Text style={{ color: "gray" }}>{item.place}</Text>
             </View>
             <View>
-              <Text style={{}}>{date()}</Text>
+              <Text style={{}}>{date(item.createdAt)}</Text>
             </View>
           </View>
         </View>
