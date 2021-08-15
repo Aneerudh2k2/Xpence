@@ -21,7 +21,7 @@ const AuthStack = ({ navigation }) => {
         setFirstLaunch(true);
       } else {
         // change it to false
-        setFirstLaunch(true);
+        setFirstLaunch(false);
       }
     });
   });
