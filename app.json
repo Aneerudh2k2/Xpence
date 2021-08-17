@@ -4,6 +4,7 @@
     "name": "Xpence",
     "slug": "Xpence",
     "version": "1.0.0",
+    "description": "A expense tracker app for stats and analytics",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -15,9 +16,7 @@
     "updates": {
       "fallbackToCacheTimeout": 0
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true
     },
