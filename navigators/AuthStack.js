@@ -27,12 +27,16 @@ const AuthStack = ({ navigation }) => {
   });
 
   let routeName;
+  console.log("First launch: ", isFirstLaunch);
 
-  if (isFirstLaunch === true) {
+  if (isFirstLaunch === null) {
+    return null;
+  } else if (isFirstLaunch === true) {
     routeName = "OnBoarding";
   } else {
     routeName = "Login";
   }
+  console.log("Route name: ", routeName);
 
   let linking = {
     prefixes: [Linking.makeUrl("/")],

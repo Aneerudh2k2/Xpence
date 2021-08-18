@@ -15,11 +15,11 @@ import * as Linking from "expo-linking";
 import { get_access_token, save_access_token } from "../utils/securestore";
 
 const Login = ({ navigation }) => {
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId:
-      "211230601413-987o47v63tgvp570reqrmfp5ceorrt9f.apps.googleusercontent.com",
-    clientSecret: "QGSaWa3sUcX2Lp9sq3bnyzin",
-  });
+  // const [request, response, promptAsync] = Google.useAuthRequest({
+  //   expoClientId:
+  //     "211230601413-987o47v63tgvp570reqrmfp5ceorrt9f.apps.googleusercontent.com",
+  //   clientSecret: "QGSaWa3sUcX2Lp9sq3bnyzin",
+  // });
 
   // useEffect(() => {
   //   if (response?.type === "success") {

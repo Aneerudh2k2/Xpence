@@ -1,8 +1,8 @@
 {
   "expo": {
-    "scheme": "xpence",
     "name": "Xpence",
     "slug": "Xpence",
+    "scheme": "xpence",
     "version": "1.0.0",
     "description": "A expense tracker app for stats and analytics",
     "orientation": "portrait",
