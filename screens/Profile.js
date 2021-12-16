@@ -64,7 +64,7 @@ const Profile = ({ navigation }) => {
       // const data = await fetch("https://randomuser.me/api");
 
       let userData = await fetch(
-        `https://xpenceapi.herokuapp.com/users/me?access_token=${access_token}`
+        `http://anee.eastus.cloudapp.azure.com:5000/users/me?access_token=${access_token}`
       );
       // "https://randomuser.me/api"
       userData = await userData.json();
@@ -99,7 +99,7 @@ const Profile = ({ navigation }) => {
     try {
       const access_token = await get_access_token();
       let expenseData1 = await fetch(
-        `https://xpenceapi.herokuapp.com/expense/profile_stats?access_token=${access_token}`
+        `http://anee.eastus.cloudapp.azure.com:5000/expense/profile_stats?access_token=${access_token}`
       );
       expenseData1 = await expenseData1.json();
       if (expenseData1.error) {
@@ -119,7 +119,7 @@ const Profile = ({ navigation }) => {
       // console.log(expenseData1);
 
       let expenseData2 = await fetch(
-        `https://xpenceapi.herokuapp.com/expense/category_count?access_token=${access_token}`
+        `http://anee.eastus.cloudapp.azure.com:5000/expense/category_count?access_token=${access_token}`
       );
       expenseData2 = await expenseData2.json();
       if (expenseData2.error) {
