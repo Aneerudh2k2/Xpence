@@ -28,7 +28,7 @@ const DrawerContent = (props, { navigation }) => {
       const access_token = await get_access_token();
       console.log("\nFrom drawercontent: ", access_token);
       let data1 = await fetch(
-        `http://anee.eastus.cloudapp.azure.com:5000/users/me?access_token=${access_token}`
+        `https://xpenceapi.herokuapp.com/users/me?access_token=${access_token}`
       );
       data1 = await data1.json();
       if (data1.error) {
@@ -50,7 +50,7 @@ const DrawerContent = (props, { navigation }) => {
   const handleSignOut = async () => {
     const access_token = await get_access_token();
     let result = await fetch(
-      `http://anee.eastus.cloudapp.azure.com:5000/logout?access_token=${access_token}`
+      `https://xpenceapi.herokuapp.com/logout?access_token=${access_token}`
     );
     result = await result.json();
     if (result.logged_out) {

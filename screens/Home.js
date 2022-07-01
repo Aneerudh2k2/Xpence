@@ -182,7 +182,7 @@ const Home = ({ navigation, route }) => {
       const data = await fetch("https://randomuser.me/api");
       // "https://randomuser.me/api"
       let data1 = await fetch(
-        `http://anee.eastus.cloudapp.azure.com:5000/users/me?access_token=${access_token}`
+        `https://xpenceapi.herokuapp.com/users/me?access_token=${access_token}`
       );
       data1 = await data1.json();
       console.log(data1);
@@ -214,7 +214,7 @@ const Home = ({ navigation, route }) => {
     try {
       const access_token = await get_access_token();
       let homePageExpenseData = await fetch(
-        `http://anee.eastus.cloudapp.azure.com:5000/expenses?sortBy=createdAt_desc&limit=5&access_token=${access_token}`
+        `https://xpenceapi.herokuapp.com/expenses?sortBy=createdAt_desc&limit=5&access_token=${access_token}`
       );
       homePageExpenseData = await homePageExpenseData.json();
       if (homePageExpenseData.error) {
@@ -223,7 +223,7 @@ const Home = ({ navigation, route }) => {
       }
 
       let countData = await fetch(
-        `http://anee.eastus.cloudapp.azure.com:5000/expense/category_count?access_token=${access_token}`
+        `https://xpenceapi.herokuapp.com/expense/category_count?access_token=${access_token}`
       );
       countData = await countData.json();
       if (countData.error) {
@@ -232,7 +232,7 @@ const Home = ({ navigation, route }) => {
       }
 
       let totalExpense = await fetch(
-        `http://anee.eastus.cloudapp.azure.com:5000/expense/profile_stats?access_token=${access_token}`
+        `https://xpenceapi.herokuapp.com/expense/profile_stats?access_token=${access_token}`
       );
       totalExpense = await totalExpense.json();
       if (totalExpense.error) {
@@ -242,7 +242,7 @@ const Home = ({ navigation, route }) => {
       console.log(totalExpense);
 
       let monthlyData = await fetch(
-        `http://anee.eastus.cloudapp.azure.com:5000/expense/monthly_expense?access_token=${access_token}`
+        `https://xpenceapi.herokuapp.com/expense/monthly_expense?access_token=${access_token}`
       );
       monthlyData = await monthlyData.json();
       if (monthlyData.error) {
@@ -266,7 +266,7 @@ const Home = ({ navigation, route }) => {
     console.log("using variable: ", postExpenseData);
     console.log("using form data: ", formdata);
     let data = await fetch(
-      `http://anee.eastus.cloudapp.azure.com:5000/expense?access_token=${token}`,
+      `https://xpenceapi.herokuapp.com/expense?access_token=${token}`,
       {
         method: "post",
         headers: {

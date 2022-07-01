@@ -52,7 +52,7 @@ const Login = ({ navigation }) => {
   const handleOAuthLogin = async () => {
     let redirectUrl = await Linking.makeUrl("/");
     console.log(redirectUrl);
-    let authUrl = `http://anee.eastus.cloudapp.azure.com:5000/login?redirectUrl=${redirectUrl}`;
+    let authUrl = `https://xpenceapi.herokuapp.com/login?redirectUrl=${redirectUrl}`;
     try {
       let authresult = await WebBrowser.openAuthSessionAsync(
         authUrl,
@@ -78,7 +78,7 @@ const Login = ({ navigation }) => {
     let redirectUrl = await AuthSession.makeRedirectUri({ path: "/home" });
     console.log(redirectUrl);
     const authresult = await AuthSession.startAsync({
-      authUrl: `http://anee.eastus.cloudapp.azure.com:5000/login`,
+      authUrl: `https://xpenceapi.herokuapp.com/login`,
       returnUrl: redirectUrl,
     });
     let temp;

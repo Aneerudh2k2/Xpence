@@ -32,7 +32,7 @@ const Expenses = ({ navigation }) => {
       // // "https://randomuser.me/api"
       const access_token = await get_access_token();
       let expenseData = await fetch(
-        `http://anee.eastus.cloudapp.azure.com:5000/expenses?sortBy=createdAt_desc&access_token=${access_token}`
+        `https://xpenceapi.herokuapp.com/expenses?sortBy=createdAt_desc&access_token=${access_token}`
       );
       expenseData = await expenseData.json();
       if (expenseData.error) {
